@@ -34,18 +34,25 @@ bl_info = {
 }
 
 import bpy
-from . import operator
+from . import operator, settings, simulation, ui
 
 if "bpy" in locals():
     import importlib
+    importlib.reload(simulation)
+    importlib.reload(settings)
     importlib.reload(operator)
+    importlib.reload(ui)
 
 
 def register():
     operator.register()
+    settings.register()
+    ui.register()
 
 def unregister():
     operator.unregister()
+    settings.unregister()
+    ui.unregister()
 
 if __name__ == "__main__":
     register()
