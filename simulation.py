@@ -36,8 +36,7 @@ def _set_geonodes_input(mod, name, value):
 
 
 # Signatures expected on modifier types
-_sim_node_sig = [("Input", 'OBJECT'), ("Reset", 'BOOLEAN'), ("Step", 'INT')]
-_copy_geo_sig = [("Input", 'OBJECT')]
+_sim_node_sig = [("Reset", 'BOOLEAN'), ("Step", 'INT')]
 
 
 # Returns true if the node group signature matches
@@ -61,43 +60,6 @@ def _find_modifier(obj, sig, report=None):
             return mod
 
 
-def _get_swap_chain(obj):
-    swap_chain_coll = bpy.data.collections.get("__swap_chain", None)
-    if swap_chain_coll is None:
-        swap_chain_coll = bpy.data.collections.new("__swap_chain")
-        bpy.context.scene.collection.children.link(swap_chain_coll)
-        swap_chain_coll.hide_render = True
-        layer_swap_chain = bpy.context.view_layer.layer_collection.children.get(swap_chain_coll.name, None)
-        if layer_swap_chain:
-            layer_swap_chain.hide_viewport = True
-
-    swap_chain = list()
-    for i in range(2):
-        name = "{}.__swap_chain_{}".format(obj.name, i + 1)
-        swap_obj = swap_chain_coll.objects.get(name, None)
-        if swap_obj is None:
-            mesh = bpy.data.meshes.get(name, None)
-            if mesh is None:
-                mesh = bpy.data.meshes.new(name)
-            swap_obj = bpy.data.objects.new(name, mesh)
-            swap_chain_coll.objects.link(swap_obj)
-        swap_chain.append(swap_obj)
-
-    return swap_chain
-
-
-def _find_next_swap_chain_object(mod):
-    swap_chain = _get_swap_chain(mod.id_data)
-    swap_chain_next = swap_chain[1:] + [swap_chain[0]]
-
-    cur_obj = _get_geonodes_input(mod, "Input")
-    for obj, next_obj in zip(swap_chain, swap_chain_next):
-        if obj == cur_obj:
-            return next_obj
-    # No object from swap chain set, select arbitrary
-    return swap_chain[0]
-
-
 def check_sim_modifier(obj, report):
     return _find_modifier(obj, _sim_node_sig, report)
 
@@ -115,9 +77,6 @@ def sim_modifier_pre_step(obj, step, report):
     mod.show_render = False
     mod.show_viewport = False
 
-    # Swap objects for the prev/next iteration
-    next_obj = _find_next_swap_chain_object(mod)
-    _set_geonodes_input(mod, "Input", next_obj)
     _set_geonodes_input(mod, "Step", step)
     _set_geonodes_input(mod, "Reset", step == 0)
 
@@ -128,34 +87,11 @@ def sim_modifier_pre_step(obj, step, report):
 
 # Store geometry result
 def sim_modifier_post_step(obj, report):
-    mod = _find_modifier(obj, _sim_node_sig)
-    if not mod:
-        return
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    obj_eval = obj.evaluated_get(depsgraph)
+    mesh_new = bpy.data.meshes.new_from_object(obj_eval, preserve_all_data_layers=True, depsgraph=depsgraph)
 
-    copy_geo_nodes = bpy.data.node_groups['CopyGeometry']
-    if not copy_geo_nodes:
-        report("Could not find node group 'CopyGeometry'")
-        return
-    if not _check_nodes_sig(copy_geo_nodes, _copy_geo_sig, report=report):
-        return
+    mesh_old = obj.data
+    obj.data = mesh_new
 
-    # Order here is important for performance and to avoid dependency cycles:
-    # 1. Add a "CopyGeometry" modifier to the swap chain output object
-    # 2  Set "Input" to the simulation object to copy the result of the current frame.
-    # 3. Apply the CopyGeometry modifier to store the result in the swap chain output object.
-    next_obj = _find_next_swap_chain_object(mod)
-    copy_geo_mod = next_obj.modifiers.new(type='NODES', name="Copy")
-
-    new_geo_nodes = copy_geo_mod.node_group
-    copy_geo_mod.node_group = copy_geo_nodes
-    # New GeometryNodes modifier adds an empty node group, polluting the bpy.data.node_groups collection over time.
-    if new_geo_nodes:
-        bpy.data.node_groups.remove(new_geo_nodes)
-
-    _set_geonodes_input(copy_geo_mod, "Input", mod.id_data)
-
-    override = bpy.context.copy()
-    override['object'] = next_obj
-    override['active_object'] = next_obj
-    override['selected_objects'] = [next_obj]
-    bpy.ops.object.modifier_apply(override, modifier=copy_geo_mod.name)
+    bpy.data.meshes.remove(mesh_old)
