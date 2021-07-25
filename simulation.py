@@ -128,6 +128,10 @@ def sim_modifier_pre_step(obj, step, report):
 
 # Store geometry result
 def sim_modifier_post_step(obj, report):
+    mod = _find_modifier(obj, _sim_node_sig)
+    if not mod:
+        return
+
     copy_geo_nodes = bpy.data.node_groups['CopyGeometry']
     if not copy_geo_nodes:
         report("Could not find node group 'CopyGeometry'")
