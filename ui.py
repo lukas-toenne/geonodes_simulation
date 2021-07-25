@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 import bpy
-from .simulation import find_modifier, sim_node_sig
+from . import simulation
 
 
 class GeoNodesSimPanel(bpy.types.Panel):
@@ -53,7 +53,7 @@ class GeoNodesSimPanel(bpy.types.Panel):
             nonlocal errors
             errors.append(message)
         for obj in coll.objects:
-            mod = find_modifier(obj, sim_node_sig, report=report)
+            simulation.check_sim_modifier(obj, report)
         for message in errors:
             col.label(text=message, icon='ERROR')
 

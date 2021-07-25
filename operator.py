@@ -22,10 +22,10 @@
 
 import bpy
 from bpy.props import *
-from .simulation import GeoNodesSimBase
+from . import simulation
 
 
-class GeoNodesSimControlOperator(GeoNodesSimBase):
+class GeoNodesSimControlOperator():
     @classmethod
     def poll(cls, context):
         coll = context.collection
@@ -33,6 +33,13 @@ class GeoNodesSimControlOperator(GeoNodesSimBase):
             return False
         settings = coll.geo_nodes_sim_settings
         return settings.enabled and settings.control_mode == 'MANUAL'
+
+    def update_collection(self, collection, step):
+        simple_report = lambda msg: self.report('ERROR', msg)
+        for obj in collection.objects:
+            simulation.sim_modifier_pre_step(obj, step, report=simple_report)
+            simulation.sim_modifier_post_step(obj, report=simple_report)
+
 
 
 class GeoNodesReset(GeoNodesSimControlOperator, bpy.types.Operator):
@@ -44,13 +51,7 @@ class GeoNodesReset(GeoNodesSimControlOperator, bpy.types.Operator):
         coll = context.collection
         settings = coll.geo_nodes_sim_settings
 
-        for obj in coll.objects:
-            mod = find_modifier(obj, sim_node_sig)
-            if mod:
-                self.pre_step(mod, 0)
-                self.step(mod)
-                self.post_step(mod)
-
+        self.update_collection(coll, 0)
         settings.next_step = 1
 
         return {'FINISHED'}
@@ -65,13 +66,7 @@ class GeoNodesStep(GeoNodesSimControlOperator, bpy.types.Operator):
         coll = context.collection
         settings = coll.geo_nodes_sim_settings
 
-        for obj in coll.objects:
-            mod = find_modifier(obj, sim_node_sig)
-            if mod:
-                self.pre_step(mod, settings.next_step)
-                self.step(mod)
-                self.post_step(mod)
-
+        self.update_collection(coll, settings.next_step)
         settings.next_step += 1
 
         return {'FINISHED'}
@@ -96,13 +91,7 @@ class GeoNodesRun(GeoNodesSimControlOperator, bpy.types.Operator):
 
         print("Substeps: {}:{}".format(step_start, step_end))
         for step in range(step_start, step_end):
-            for obj in coll.objects:
-                mod = find_modifier(obj, sim_node_sig)
-                if mod:
-                    self.pre_step(mod, step)
-                    self.step(mod)
-                    self.post_step(mod)
-
+            self.update_collection(coll, step)
             settings.next_step = step + 1
 
         return {'RUNNING_MODAL'} if step_end < settings.step_count else {'FINISHED'}

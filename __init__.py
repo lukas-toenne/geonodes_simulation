@@ -34,12 +34,13 @@ bl_info = {
 }
 
 import bpy
-from . import operator, settings, simulation, ui
+from . import operator, settings, simulation, timeline, ui
 
 if "bpy" in locals():
     import importlib
     importlib.reload(simulation)
     importlib.reload(settings)
+    importlib.reload(timeline)
     importlib.reload(operator)
     importlib.reload(ui)
 
@@ -47,11 +48,13 @@ if "bpy" in locals():
 def register():
     operator.register()
     settings.register()
+    timeline.register()
     ui.register()
 
 def unregister():
     operator.unregister()
     settings.unregister()
+    timeline.unregister()
     ui.unregister()
 
 if __name__ == "__main__":

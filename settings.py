@@ -22,13 +22,18 @@
 
 import bpy
 from bpy.props import *
+from . import timeline
 
 
 class GeoNodesSimSettings(bpy.types.PropertyGroup):
+    def _update_handlers(self, context):
+        timeline.update_frame_handler()
+
     enabled : BoolProperty(
         name="Enabled",
         description="Simulate objects with geometry node modifiers in this collection",
         default=False,
+        update=_update_handlers,
         )
 
     control_mode_items = [
@@ -40,6 +45,7 @@ class GeoNodesSimSettings(bpy.types.PropertyGroup):
         description="How simulation steps are executed",
         items=control_mode_items,
         default='TIMELINE',
+        update=_update_handlers,
         )
 
     step_count : IntProperty(
