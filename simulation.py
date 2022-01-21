@@ -64,6 +64,21 @@ def check_sim_modifier(obj, report):
     return _find_modifier(obj, _sim_node_sig, report)
 
 
+# Copies the depsgraph result to bpy.data
+# and replaces the object mesh for the next iteration.
+def _copy_mesh_result_to_data(obj):
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    obj_eval = obj.evaluated_get(depsgraph)
+    # mesh_eval = obj_eval.data
+    mesh_new = bpy.data.meshes.new_from_object(obj_eval, preserve_all_data_layers=True, depsgraph=depsgraph)
+    mesh_old = obj.data
+    obj.data = mesh_new
+    bpy.data.meshes.remove(mesh_old)
+
+
+# If true, the modifier result is copied to mesh data right after each step update.
+_show_next_step_result = False
+
 # Prepare modifier and update geometry
 def sim_modifier_pre_step(obj, step, report):
     mod_show = None
@@ -71,6 +86,10 @@ def sim_modifier_pre_step(obj, step, report):
     mod = _find_modifier(obj, _sim_node_sig)
     if not mod:
         return
+
+    if not _show_next_step_result:
+        # Get last modifier result and copy it back to mesh data
+        _copy_mesh_result_to_data(obj)
 
     # Disable modifier while changing inputs
     mod_show = (mod.show_render, mod.show_viewport)
@@ -87,11 +106,5 @@ def sim_modifier_pre_step(obj, step, report):
 
 # Store geometry result
 def sim_modifier_post_step(obj, report):
-    depsgraph = bpy.context.evaluated_depsgraph_get()
-    obj_eval = obj.evaluated_get(depsgraph)
-    mesh_new = bpy.data.meshes.new_from_object(obj_eval, preserve_all_data_layers=True, depsgraph=depsgraph)
-
-    mesh_old = obj.data
-    obj.data = mesh_new
-
-    bpy.data.meshes.remove(mesh_old)
+    if _show_next_step_result:
+        _copy_mesh_result_to_data(obj)
