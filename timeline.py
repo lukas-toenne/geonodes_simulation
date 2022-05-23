@@ -33,19 +33,23 @@ def frame_change_pre(scene):
     step = scene.frame_current - scene.frame_start
     print("GeoNodes Sim: Frame {}, step {}".format(scene.frame_current, step))
     for coll in _geonodes_sim_collections:
-        for obj in coll.objects:
-            simulation.sim_modifier_pre_step(obj, step, report=print)
+        settings = coll.geo_nodes_sim_settings
+        simulation.sim_modifier_pre_step(settings.sim_input, settings.sim_output, step, report=print)
 
 # Non-persistent handler: Gets added by the load_post handler or when settings change.
 def frame_change_post(scene):
     for coll in _geonodes_sim_collections:
-        for obj in coll.objects:
-            simulation.sim_modifier_post_step(obj, report=print)
+        settings = coll.geo_nodes_sim_settings
+        simulation.sim_modifier_post_step(settings.sim_input, settings.sim_output, report=print)
 
 
 def update_frame_handler():
     global _geonodes_sim_collections
-    _geonodes_sim_collections = [coll for coll in bpy.data.collections if coll.geo_nodes_sim_settings.enabled and coll.geo_nodes_sim_settings.control_mode == 'TIMELINE']
+    _geonodes_sim_collections = [
+        coll
+        for coll in bpy.data.collections
+            if coll.geo_nodes_sim_settings.enabled and coll.geo_nodes_sim_settings.control_mode == 'TIMELINE'
+        ]
     if _geonodes_sim_collections:
         print("GeoNodes Sim: Found {} collections in timeline mode, adding frame change handler".format(len(_geonodes_sim_collections)))
         if frame_change_pre not in bpy.app.handlers.frame_change_pre:

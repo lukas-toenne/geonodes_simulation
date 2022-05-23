@@ -36,9 +36,9 @@ class GeoNodesSimControlOperator():
 
     def update_collection(self, collection, step):
         simple_report = lambda msg: self.report('ERROR', msg)
-        for obj in collection.objects:
-            simulation.sim_modifier_pre_step(obj, step, report=simple_report)
-            simulation.sim_modifier_post_step(obj, report=simple_report)
+        settings = collection.geo_nodes_sim_settings
+        simulation.sim_modifier_pre_step(settings.sim_input, settings.sim_output, step, report=simple_report)
+        simulation.sim_modifier_post_step(settings.sim_input, settings.sim_output, report=simple_report)
 
 
 

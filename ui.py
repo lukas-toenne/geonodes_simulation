@@ -43,7 +43,8 @@ class GeoNodesSimPanel(bpy.types.Panel):
         coll = context.collection
         settings = coll.geo_nodes_sim_settings
 
-        layout.prop(settings, "enabled")
+        layout.prop(settings, "sim_input")
+        layout.prop(settings, "sim_output")
 
         col = layout.column()
         col.enabled = settings.enabled
@@ -52,8 +53,7 @@ class GeoNodesSimPanel(bpy.types.Panel):
         def report(message):
             nonlocal errors
             errors.append(message)
-        for obj in coll.objects:
-            simulation.check_sim_modifier(obj, report)
+        simulation.check_sim_modifier(settings.sim_input, report)
         for message in errors:
             col.label(text=message, icon='ERROR')
 

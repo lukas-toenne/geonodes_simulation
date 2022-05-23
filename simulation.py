@@ -61,18 +61,19 @@ def _find_modifier(obj, sig, report=None):
 
 
 def check_sim_modifier(obj, report):
-    return _find_modifier(obj, _sim_node_sig, report)
+    if obj:
+        return _find_modifier(obj, _sim_node_sig, report)
 
 
 # Copies the depsgraph result to bpy.data
 # and replaces the object mesh for the next iteration.
-def _copy_mesh_result_to_data(obj):
+def _copy_mesh_result_to_data(src, dst):
     depsgraph = bpy.context.evaluated_depsgraph_get()
-    obj_eval = obj.evaluated_get(depsgraph)
+    src_eval = src.evaluated_get(depsgraph)
     # mesh_eval = obj_eval.data
-    mesh_new = bpy.data.meshes.new_from_object(obj_eval, preserve_all_data_layers=True, depsgraph=depsgraph)
-    mesh_old = obj.data
-    obj.data = mesh_new
+    mesh_new = bpy.data.meshes.new_from_object(src_eval, preserve_all_data_layers=True, depsgraph=depsgraph)
+    mesh_old = dst.data
+    dst.data = mesh_new
     bpy.data.meshes.remove(mesh_old)
 
 
@@ -80,16 +81,19 @@ def _copy_mesh_result_to_data(obj):
 _show_next_step_result = False
 
 # Prepare modifier and update geometry
-def sim_modifier_pre_step(obj, step, report):
+def sim_modifier_pre_step(input, output, step, report):
+    if input is None or output is None:
+        return
+
     mod_show = None
 
-    mod = _find_modifier(obj, _sim_node_sig)
+    mod = _find_modifier(input, _sim_node_sig)
     if not mod:
         return
 
     if not _show_next_step_result:
         # Get last modifier result and copy it back to mesh data
-        _copy_mesh_result_to_data(obj)
+        _copy_mesh_result_to_data(output, input)
 
     # Disable modifier while changing inputs
     mod_show = (mod.show_render, mod.show_viewport)
@@ -105,6 +109,8 @@ def sim_modifier_pre_step(obj, step, report):
 
 
 # Store geometry result
-def sim_modifier_post_step(obj, report):
+def sim_modifier_post_step(input, output, report):
+    if input is None or output is None:
+        return
     if _show_next_step_result:
-        _copy_mesh_result_to_data(obj)
+        _copy_mesh_result_to_data(output, input)

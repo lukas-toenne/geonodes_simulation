@@ -26,15 +26,24 @@ from . import timeline
 
 
 class GeoNodesSimSettings(bpy.types.PropertyGroup):
+    sim_input : bpy.props.PointerProperty(
+        type=bpy.types.Object,
+        name="Input",
+        description="Object with input state of the simulation frame",
+        )
+
+    sim_output : bpy.props.PointerProperty(
+        type=bpy.types.Object,
+        name="Output",
+        description="Object with output state of the simulation frame",
+        )
+
+    @property
+    def enabled(self):
+        return self.sim_input is not None and self.sim_output is not None
+
     def _update_handlers(self, context):
         timeline.update_frame_handler()
-
-    enabled : BoolProperty(
-        name="Enabled",
-        description="Simulate objects with geometry node modifiers in this collection",
-        default=False,
-        update=_update_handlers,
-        )
 
     control_mode_items = [
         ('TIMELINE', "Timeline", "Use the timeline to advance the simulation, reset on the start frame"),
